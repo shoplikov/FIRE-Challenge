@@ -4,8 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.models.business_unit import BusinessUnit
+from app.models.manager import Manager
 from app.models.ticket import AIAnalysis, Assignment, Ticket
 from app.schemas.business_unit import BusinessUnitOut
+from app.schemas.manager import ManagerOut
 from app.schemas.ticket import (
     AIChartRequest,
     AIChartResponse,
@@ -106,3 +108,70 @@ async def ai_chart(
         data_1d=data_1d,
         data_2d=data_2d,
     )
+
+@router.get("/dashboard/map", response_model=list[BusinessUnitOut])
+async def dashboard_map(session: AsyncSession = Depends(get_session)):
+    # Выбираем все нужные поля, включая address
+    result = await session.execute(
+        select(
+            BusinessUnit.id,
+            BusinessUnit.name,
+            BusinessUnit.address,  # ОБЯЗАТЕЛЬНО, так как в схеме это поле обязательное
+            BusinessUnit.latitude,
+            BusinessUnit.longitude,
+        )
+        .where(BusinessUnit.latitude.is_not(None))
+        .where(BusinessUnit.longitude.is_not(None))
+    )
+    rows = result.all()
+
+    # Возвращаем данные, строго соблюдая имена полей из твоей схемы Pydantic
+    return [
+        BusinessUnitOut(
+            id=row[0],
+            name=row[1],
+            address=row[2],
+            latitude=row[3],
+            longitude=row[4],
+        )
+        for row in rows
+    ]
+
+
+@router.get(
+    "/dashboard/business-units/{unit_id}/managers",
+    response_model=list[ManagerOut],
+)
+async def business_unit_managers(
+    unit_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    # Используем outerjoin, чтобы менеджеры с 0 тикетов тоже отображались
+    rows = (
+        await session.execute(
+            select(
+                Manager,
+                func.count(Ticket.id).label("load_count"),
+            )
+            .outerjoin(Assignment, Assignment.manager_id == Manager.id)
+            .outerjoin(Ticket, (Ticket.id == Assignment.ticket_id) & (Ticket.status == "open"))
+            .where(Manager.business_unit_id == unit_id)
+            .group_by(Manager.id)
+        )
+    ).all()
+
+    managers = []
+    for manager, load in rows:
+        managers.append(
+            ManagerOut(
+                id=manager.id,
+                name=manager.name,
+                position=manager.position,
+                skills=manager.skills,
+                business_unit_id=manager.business_unit_id,
+                business_unit_name=manager.business_unit.name if manager.business_unit else None,
+                current_load=load, # Теперь тут будет 0, а не пустота
+            )
+        )
+
+    return managers
