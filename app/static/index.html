@@ -5,90 +5,460 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ticket Distribution Service</title>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0f1117;--surface:#1a1d27;--surface2:#242836;--border:#2e3346;
-  --text:#e4e6f0;--text2:#9ca0b0;--accent:#6c8cff;--accent2:#4a6adf;
-  --green:#34d399;--red:#f87171;--yellow:#fbbf24;--purple:#a78bfa;
-}
-body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
-a{color:var(--accent);text-decoration:none}
+  /* Reset */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-.app{display:flex;min-height:100vh}
-.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);padding:20px 0;flex-shrink:0;position:fixed;height:100vh;overflow-y:auto}
-.sidebar h1{font-size:14px;font-weight:700;padding:0 20px 20px;color:var(--accent);letter-spacing:0.5px;text-transform:uppercase}
-.sidebar nav a{display:block;padding:10px 20px;color:var(--text2);font-size:14px;transition:all .15s}
-.sidebar nav a:hover,.sidebar nav a.active{background:var(--surface2);color:var(--text)}
-.sidebar nav a.active{border-left:3px solid var(--accent);padding-left:17px}
+  /* Variables */
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3346;
+    --text: #e4e6f0;
+    --text2: #9ca0b0;
+    --accent: #6c8cff;
+    --accent2: #4a6adf;
+    --green: #34d399;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --purple: #a78bfa;
+  }
 
-.main{margin-left:220px;flex:1;padding:24px;min-width:0}
-.page{display:none}
-.page.active{display:block}
+  /* Base */
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
 
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-.page-header h2{font-size:22px;font-weight:600}
+  /* Layout */
+  .app {
+    display: flex;
+    min-height: 100vh;
+  }
+  .main {
+    margin-left: 220px;
+    flex: 1;
+    padding: 24px;
+    min-width: 0;
+  }
 
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px}
-.stat-card .label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
-.stat-card .value{font-size:28px;font-weight:700}
-.stat-card .value.accent{color:var(--accent)}
-.stat-card .value.green{color:var(--green)}
+  /* Sidebar */
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    flex-shrink: 0;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .sidebar h1 {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 20px 20px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .sidebar nav a {
+    display: block;
+    padding: 10px 20px;
+    color: var(--text2);
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .sidebar nav a:hover,
+  .sidebar nav a.active {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .sidebar nav a.active {
+    border-left: 3px solid var(--accent);
+    padding-left: 17px;
+  }
 
-.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:24px}
-.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px}
-.chart-card h3{font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text2)}
-.bar-chart{display:flex;flex-direction:column;gap:8px}
-.bar-row{display:flex;align-items:center;gap:10px}
-.bar-row .bar-label{width:140px;font-size:13px;color:var(--text2);text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar-row .bar-track{flex:1;height:24px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative}
-.bar-row .bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
-.bar-row .bar-value{font-size:12px;font-weight:600;min-width:32px;text-align:right}
+  /* Pages */
+  .page {
+    display: none;
+  }
+  .page.active {
+    display: block;
+  }
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .page-header h2 {
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .page-actions {
+    display: flex;
+    gap: 8px;
+  }
 
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent2)}
-.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .stat-card .label {
+    font-size: 12px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+  }
+  .stat-card .value.accent { color: var(--accent); }
+  .stat-card .value.green { color: var(--green); }
 
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
-th{background:var(--surface);color:var(--text2);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;position:sticky;top:0;z-index:1}
-tr:hover td{background:var(--surface2)}
-.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:auto;max-height:calc(100vh - 200px)}
+  /* Charts */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .chart-card h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text2);
+  }
+  .bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .bar-row .bar-label {
+    width: 140px;
+    font-size: 13px;
+    color: var(--text2);
+    text-align: right;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bar-row .bar-track {
+    flex: 1;
+    height: 24px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-row .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+  .bar-row .bar-value {
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 32px;
+    text-align: right;
+  }
 
-.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
-.badge-vip{background:#7c3aed22;color:#a78bfa}
-.badge-mass{background:#6c8cff22;color:#6c8cff}
-.badge-priority{background:#f59e0b22;color:#fbbf24}
-.badge-pos{background:#34d39922;color:#34d399}
-.badge-neg{background:#f8717122;color:#f87171}
-.badge-neu{background:#6c8cff22;color:#9ca0b0}
+  /* Upload card */
+  .upload-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .upload-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text2);
+  }
+  .upload-card .file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .upload-card label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .upload-card input[type="file"] {
+    font-size: 12px;
+    color: var(--text);
+  }
+  .upload-card .upload-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .upload-card .upload-status {
+    font-size: 13px;
+    color: var(--text2);
+  }
 
-.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
-.filters select{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px}
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--accent2);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
-.modal-overlay{position:fixed;inset:0;background:#000a;z-index:100;display:none;align-items:center;justify-content:center}
-.modal-overlay.show{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px}
-.modal h3{margin-bottom:16px;font-size:18px}
-.modal .close{float:right;background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.detail-grid .field{padding:8px;background:var(--surface2);border-radius:6px}
-.detail-grid .field .field-label{font-size:11px;color:var(--text2);text-transform:uppercase;margin-bottom:2px}
-.detail-grid .field-full{grid-column:1/-1}
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: var(--surface);
+    color: var(--text2);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  tr:hover td {
+    background: var(--surface2);
+  }
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: auto;
+    max-height: calc(100vh - 200px);
+  }
+  .table-row-clickable {
+    cursor: pointer;
+  }
+  .col-guid {
+    font-size: 11px;
+  }
 
-.pagination{display:flex;align-items:center;gap:12px;margin-top:12px;justify-content:center}
-.pagination button{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px}
-.pagination button:disabled{opacity:0.4;cursor:not-allowed}
-.pagination span{font-size:13px;color:var(--text2)}
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-vip { background: #7c3aed22; color: #a78bfa; }
+  .badge-mass { background: #6c8cff22; color: #6c8cff; }
+  .badge-priority { background: #f59e0b22; color: #fbbf24; }
+  .badge-pos { background: #34d39922; color: #34d399; }
+  .badge-neg { background: #f8717122; color: #f87171; }
+  .badge-neu { background: #6c8cff22; color: #9ca0b0; }
 
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+  /* Filters */
+  .filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .filters select {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
 
-.toast{position:fixed;top:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 20px;z-index:200;font-size:14px;box-shadow:0 4px 20px #0004;transition:opacity .3s;opacity:0}
-.toast.show{opacity:1}
-.toast.error{border-color:var(--red)}
-.toast.success{border-color:var(--green)}
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000a;
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show {
+    display: flex;
+  }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    max-width: 700px;
+    width: 95%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .modal h3 {
+    margin-bottom: 16px;
+    font-size: 18px;
+  }
+  .modal .close {
+    float: right;
+    background: none;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 20px;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .detail-grid .field {
+    padding: 8px;
+    background: var(--surface2);
+    border-radius: 6px;
+  }
+  .detail-grid .field .field-label {
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .detail-grid .field-full {
+    grid-column: 1 / -1;
+  }
+  .detail-grid .field-content {
+    white-space: pre-wrap;
+    font-size: 13px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .detail-grid .field-content.no-scroll {
+    max-height: none;
+  }
+  .detail-grid .detail-image {
+    max-width: 100%;
+    border-radius: 6px;
+    margin-top: 4px;
+  }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    justify-content: center;
+  }
+  .pagination button {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .pagination button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .pagination span {
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 20px;
+    z-index: 200;
+    font-size: 14px;
+    box-shadow: 0 4px 20px #0004;
+    transition: opacity 0.3s;
+    opacity: 0;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { border-color: var(--red); }
+  .toast.success { border-color: var(--green); }
 </style>
 </head>
 <body>
@@ -107,33 +477,35 @@ tr:hover td{background:var(--surface2)}
     <div id="dashboard" class="page active">
       <div class="page-header">
         <h2>Dashboard</h2>
-        <div style="display:flex;gap:8px">
+        <div class="page-actions">
           <button class="btn btn-primary" id="btnProcess">Run Pipeline</button>
         </div>
       </div>
 
-      <div class="upload-card" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:24px">
-        <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;color:var(--text2)">Step 1: Upload Data</h3>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px">
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text2)">
+      <div class="upload-card">
+        <h3>Step 1: Upload Data</h3>
+        <div class="file-grid">
+          <label>
             business_units.csv
-            <input type="file" id="fileBU" accept=".csv" style="font-size:12px;color:var(--text)">
+            <input type="file" id="fileBU" accept=".csv">
           </label>
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text2)">
+          <label>
             managers.csv
-            <input type="file" id="fileMgr" accept=".csv" style="font-size:12px;color:var(--text)">
+            <input type="file" id="fileMgr" accept=".csv">
           </label>
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text2)">
+          <label>
             tickets.csv
-            <input type="file" id="fileTkt" accept=".csv" style="font-size:12px;color:var(--text)">
+            <input type="file" id="fileTkt" accept=".csv">
           </label>
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text2)">
+          <label>
             Attachments (optional)
-            <input type="file" id="fileAtt" multiple style="font-size:12px;color:var(--text)">
+            <input type="file" id="fileAtt" multiple>
           </label>
         </div>
-        <button class="btn btn-primary" id="btnUpload">Upload & Process</button>
-        <span id="uploadStatus" style="margin-left:12px;font-size:13px;color:var(--text2)"></span>
+        <div class="upload-row">
+          <button class="btn btn-primary" id="btnUpload">Upload & Process</button>
+          <span id="uploadStatus" class="upload-status"></span>
+        </div>
       </div>
 
       <div class="stats-grid" id="statsCards"></div>
@@ -169,261 +541,315 @@ tr:hover td{background:var(--surface2)}
 <div class="toast" id="toast"></div>
 
 <script>
-const API = '';
-let ticketPage = 1, ticketSize = 50, ticketTotal = 0;
-let filters = {};
+  const API = '';
+  const CHART_COLORS = {
+    default: ['#6c8cff', '#a78bfa', '#34d399', '#fbbf24', '#f87171', '#f472b6', '#94a3b8'],
+    sentiment: ['#34d399', '#6c8cff', '#f87171'],
+    language: ['#6c8cff', '#fbbf24', '#a78bfa'],
+    offices: ['#6c8cff', '#a78bfa', '#34d399', '#fbbf24', '#f87171', '#f472b6', '#94a3b8', '#38bdf8', '#818cf8', '#c084fc', '#fb923c', '#a3e635', '#2dd4bf', '#e879f9', '#f43f5e'],
+    segment: ['#a78bfa', '#6c8cff', '#fbbf24'],
+  };
 
-// Navigation
-document.querySelectorAll('.sidebar nav a').forEach(a => {
-  a.addEventListener('click', e => {
-    e.preventDefault();
-    document.querySelectorAll('.sidebar nav a').forEach(x => x.classList.remove('active'));
-    a.classList.add('active');
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(a.dataset.page).classList.add('active');
-    if (a.dataset.page === 'dashboard') loadDashboard();
-    if (a.dataset.page === 'tickets') loadTickets();
-    if (a.dataset.page === 'managers') loadManagers();
+  let ticketPage = 1;
+  let ticketSize = 50;
+  let ticketTotal = 0;
+
+  // —— Navigation ——
+  document.querySelectorAll('.sidebar nav a').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.sidebar nav a').forEach((x) => x.classList.remove('active'));
+      link.classList.add('active');
+      document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
+      document.getElementById(link.dataset.page).classList.add('active');
+      if (link.dataset.page === 'dashboard') loadDashboard();
+      if (link.dataset.page === 'tickets') loadTickets();
+      if (link.dataset.page === 'managers') loadManagers();
+    });
   });
-});
 
-function toast(msg, type='success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show ' + type;
-  setTimeout(() => t.className = 'toast', 3000);
-}
+  function toast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast show ${type}`;
+    setTimeout(() => { el.className = 'toast'; }, 3000);
+  }
 
-async function api(path, opts) {
-  const r = await fetch(API + path, opts);
-  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-  return r.json();
-}
+  async function api(path, opts = {}) {
+    const res = await fetch(API + path, opts);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return res.json();
+  }
 
-// DASHBOARD
-async function loadDashboard() {
-  try {
-    const s = await api('/api/dashboard/stats');
-    const cards = document.getElementById('statsCards');
-    cards.innerHTML = `
-      <div class="stat-card"><div class="label">Total Tickets</div><div class="value accent">${s.total_tickets}</div></div>
-      <div class="stat-card"><div class="label">Assigned</div><div class="value green">${s.assigned_tickets}</div></div>
-      <div class="stat-card"><div class="label">Avg Priority</div><div class="value">${s.avg_priority}</div></div>
-      <div class="stat-card"><div class="label">Unassigned</div><div class="value">${s.total_tickets - s.assigned_tickets}</div></div>
+  // —— Dashboard ——
+  async function loadDashboard() {
+    try {
+      const stats = await api('/api/dashboard/stats');
+      const cards = document.getElementById('statsCards');
+      const unassigned = stats.total_tickets - stats.assigned_tickets;
+      cards.innerHTML = `
+        <div class="stat-card"><div class="label">Total Tickets</div><div class="value accent">${stats.total_tickets}</div></div>
+        <div class="stat-card"><div class="label">Assigned</div><div class="value green">${stats.assigned_tickets}</div></div>
+        <div class="stat-card"><div class="label">Avg Priority</div><div class="value">${stats.avg_priority}</div></div>
+        <div class="stat-card"><div class="label">Unassigned</div><div class="value">${unassigned}</div></div>
+      `;
+      const charts = document.getElementById('chartsArea');
+      charts.innerHTML = '';
+      charts.appendChild(makeBarChart('Categories', stats.categories, CHART_COLORS.default));
+      charts.appendChild(makeBarChart('Sentiments', stats.sentiments, CHART_COLORS.sentiment));
+      charts.appendChild(makeBarChart('Languages', stats.languages, CHART_COLORS.language));
+      charts.appendChild(makeBarChart('Offices', stats.offices, CHART_COLORS.offices));
+      charts.appendChild(makeBarChart('Segments', stats.segments, CHART_COLORS.segment));
+    } catch (e) {
+      // Empty state is fine
+    }
+  }
+
+  function makeBarChart(title, data, colors) {
+    const div = document.createElement('div');
+    div.className = 'chart-card';
+    const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+    const max = Math.max(...entries.map((e) => e[1]), 1);
+    let html = `<h3>${title}</h3><div class="bar-chart">`;
+    entries.forEach(([label, value], i) => {
+      const pct = (value / max * 100).toFixed(1);
+      const color = colors[i % colors.length];
+      html += `<div class="bar-row">
+        <span class="bar-label" title="${label}">${label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="bar-value">${value}</span>
+      </div>`;
+    });
+    html += '</div>';
+    div.innerHTML = html;
+    return div;
+  }
+
+  // —— Upload ——
+  document.getElementById('btnUpload').addEventListener('click', async function () {
+    const btn = this;
+    const statusEl = document.getElementById('uploadStatus');
+    const fileBU = document.getElementById('fileBU').files[0];
+    const fileMgr = document.getElementById('fileMgr').files[0];
+    const fileTkt = document.getElementById('fileTkt').files[0];
+    const fileAtt = document.getElementById('fileAtt').files;
+
+    if (!fileBU || !fileMgr || !fileTkt) {
+      toast('Please select all 3 CSV files', 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Uploading...';
+    statusEl.textContent = '';
+
+    const formData = new FormData();
+    formData.append('business_units_csv', fileBU);
+    formData.append('managers_csv', fileMgr);
+    formData.append('tickets_csv', fileTkt);
+    for (const f of fileAtt) formData.append('attachments', f);
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const data = await res.json();
+      toast(`Done! Loaded: ${data.tickets_loaded}, Analyzed: ${data.tickets_analyzed}, Assigned: ${data.tickets_assigned}`);
+      statusEl.textContent = `${data.tickets_loaded} tickets loaded, ${data.tickets_assigned} assigned`;
+      loadDashboard();
+    } catch (e) {
+      toast('Pipeline failed: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Upload & Process';
+    }
+  });
+
+  // —— Run pipeline ——
+  document.getElementById('btnProcess').addEventListener('click', async function () {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Processing...';
+    try {
+      const data = await api('/api/process', { method: 'POST' });
+      toast(`Done! Loaded: ${data.tickets_loaded}, Analyzed: ${data.tickets_analyzed}, Assigned: ${data.tickets_assigned}`);
+      loadDashboard();
+    } catch (e) {
+      toast('Pipeline failed: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Run Pipeline';
+    }
+  });
+
+  // —— Tickets: filters ——
+  const SEGMENT_OPTIONS = ['VIP', 'Mass', 'Priority'];
+  const CATEGORY_OPTIONS = ['Жалоба', 'Смена данных', 'Консультация', 'Претензия', 'Неработоспособность приложения', 'Мошеннические действия', 'Спам'];
+  const SENTIMENT_OPTIONS = ['Позитивный', 'Нейтральный', 'Негативный'];
+  const LANGUAGE_OPTIONS = ['RU', 'KZ', 'ENG'];
+
+  function buildFilters() {
+    const div = document.getElementById('ticketFilters');
+    const segmentOpts = SEGMENT_OPTIONS.map((o) => `<option>${o}</option>`).join('');
+    const categoryOpts = CATEGORY_OPTIONS.map((o) => `<option>${o}</option>`).join('');
+    const sentimentOpts = SENTIMENT_OPTIONS.map((o) => `<option>${o}</option>`).join('');
+    const languageOpts = LANGUAGE_OPTIONS.map((o) => `<option>${o}</option>`).join('');
+    div.innerHTML = `
+      <select id="fSegment"><option value="">All Segments</option>${segmentOpts}</select>
+      <select id="fCategory"><option value="">All Categories</option>${categoryOpts}</select>
+      <select id="fSentiment"><option value="">All Sentiments</option>${sentimentOpts}</select>
+      <select id="fLanguage"><option value="">All Languages</option>${languageOpts}</select>
     `;
-    const charts = document.getElementById('chartsArea');
-    charts.innerHTML = '';
-    charts.appendChild(makeBarChart('Categories', s.categories, ['#6c8cff','#a78bfa','#34d399','#fbbf24','#f87171','#f472b6','#94a3b8']));
-    charts.appendChild(makeBarChart('Sentiments', s.sentiments, ['#34d399','#6c8cff','#f87171']));
-    charts.appendChild(makeBarChart('Languages', s.languages, ['#6c8cff','#fbbf24','#a78bfa']));
-    charts.appendChild(makeBarChart('Offices', s.offices, ['#6c8cff','#a78bfa','#34d399','#fbbf24','#f87171','#f472b6','#94a3b8','#38bdf8','#818cf8','#c084fc','#fb923c','#a3e635','#2dd4bf','#e879f9','#f43f5e']));
-    charts.appendChild(makeBarChart('Segments', s.segments, ['#a78bfa','#6c8cff','#fbbf24']));
-  } catch(e) { /* empty state is fine */ }
-}
-
-function makeBarChart(title, data, colors) {
-  const div = document.createElement('div');
-  div.className = 'chart-card';
-  const entries = Object.entries(data).sort((a,b) => b[1]-a[1]);
-  const max = Math.max(...entries.map(e => e[1]), 1);
-  let html = `<h3>${title}</h3><div class="bar-chart">`;
-  entries.forEach(([k,v], i) => {
-    const pct = (v/max*100).toFixed(1);
-    const c = colors[i % colors.length];
-    html += `<div class="bar-row"><span class="bar-label" title="${k}">${k}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${c}"></div></div><span class="bar-value">${v}</span></div>`;
-  });
-  html += '</div>';
-  div.innerHTML = html;
-  return div;
-}
-
-// UPLOAD
-document.getElementById('btnUpload').addEventListener('click', async function() {
-  const btn = this;
-  const status = document.getElementById('uploadStatus');
-  const fileBU = document.getElementById('fileBU').files[0];
-  const fileMgr = document.getElementById('fileMgr').files[0];
-  const fileTkt = document.getElementById('fileTkt').files[0];
-  const fileAtt = document.getElementById('fileAtt').files;
-
-  if (!fileBU || !fileMgr || !fileTkt) {
-    toast('Please select all 3 CSV files', 'error');
-    return;
-  }
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Uploading...';
-  status.textContent = '';
-
-  const fd = new FormData();
-  fd.append('business_units_csv', fileBU);
-  fd.append('managers_csv', fileMgr);
-  fd.append('tickets_csv', fileTkt);
-  for (const f of fileAtt) fd.append('attachments', f);
-
-  try {
-    const r = await fetch('/api/upload', {method:'POST', body: fd});
-    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-    const d = await r.json();
-    toast(`Done! Loaded: ${d.tickets_loaded}, Analyzed: ${d.tickets_analyzed}, Assigned: ${d.tickets_assigned}`);
-    status.textContent = `${d.tickets_loaded} tickets loaded, ${d.tickets_assigned} assigned`;
-    loadDashboard();
-  } catch(e) {
-    toast('Pipeline failed: ' + e.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Upload & Process';
-  }
-});
-
-// PROCESS
-document.getElementById('btnProcess').addEventListener('click', async function() {
-  const btn = this;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Processing...';
-  try {
-    const r = await api('/api/process', {method:'POST'});
-    toast(`Done! Loaded: ${r.tickets_loaded}, Analyzed: ${r.tickets_analyzed}, Assigned: ${r.tickets_assigned}`);
-    loadDashboard();
-  } catch(e) {
-    toast('Pipeline failed: ' + e.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Run Pipeline';
-  }
-});
-
-// TICKETS
-function buildFilters() {
-  const div = document.getElementById('ticketFilters');
-  div.innerHTML = `
-    <select id="fSegment"><option value="">All Segments</option><option>VIP</option><option>Mass</option><option>Priority</option></select>
-    <select id="fCategory"><option value="">All Categories</option><option>Жалоба</option><option>Смена данных</option><option>Консультация</option><option>Претензия</option><option>Неработоспособность приложения</option><option>Мошеннические действия</option><option>Спам</option></select>
-    <select id="fSentiment"><option value="">All Sentiments</option><option>Позитивный</option><option>Нейтральный</option><option>Негативный</option></select>
-    <select id="fLanguage"><option value="">All Languages</option><option>RU</option><option>KZ</option><option>ENG</option></select>
-  `;
-  ['fSegment','fCategory','fSentiment','fLanguage'].forEach(id => {
-    document.getElementById(id).addEventListener('change', () => { ticketPage=1; loadTickets(); });
-  });
-}
-buildFilters();
-
-async function loadTickets() {
-  const params = new URLSearchParams({page: ticketPage, size: ticketSize});
-  const seg = document.getElementById('fSegment')?.value;
-  const cat = document.getElementById('fCategory')?.value;
-  const sent = document.getElementById('fSentiment')?.value;
-  const lang = document.getElementById('fLanguage')?.value;
-  if (seg) params.set('segment', seg);
-  if (cat) params.set('category', cat);
-  if (sent) params.set('sentiment', sent);
-  if (lang) params.set('language', lang);
-
-  try {
-    const d = await api('/api/tickets?' + params);
-    ticketTotal = d.total;
-    document.getElementById('ticketHead').innerHTML = '<tr><th>ID</th><th>GUID</th><th>Segment</th><th>Category</th><th>Sentiment</th><th>Priority</th><th>Language</th><th>Manager</th><th>Office</th></tr>';
-    const body = document.getElementById('ticketBody');
-    body.innerHTML = '';
-    d.items.forEach(t => {
-      const tr = document.createElement('tr');
-      tr.style.cursor = 'pointer';
-      tr.addEventListener('click', () => showTicketDetail(t));
-      const a = t.ai_analysis || {};
-      const asgn = t.assignment || {};
-      tr.innerHTML = `
-        <td>${t.id}</td>
-        <td style="font-size:11px">${t.client_guid?.slice(0,8)}...</td>
-        <td><span class="badge badge-${t.segment.toLowerCase()}">${t.segment}</span></td>
-        <td>${a.category||'—'}</td>
-        <td>${sentBadge(a.sentiment)}</td>
-        <td>${a.priority||'—'}</td>
-        <td>${a.language||'—'}</td>
-        <td>${asgn.manager_name||'—'}</td>
-        <td>${asgn.business_unit_name||'—'}</td>
-      `;
-      body.appendChild(tr);
+    ['fSegment', 'fCategory', 'fSentiment', 'fLanguage'].forEach((id) => {
+      document.getElementById(id).addEventListener('change', () => {
+        ticketPage = 1;
+        loadTickets();
+      });
     });
-    renderPagination();
-  } catch(e) { /* empty */ }
-}
-
-function sentBadge(s) {
-  if (!s) return '—';
-  const cls = s === 'Позитивный' ? 'pos' : s === 'Негативный' ? 'neg' : 'neu';
-  return `<span class="badge badge-${cls}">${s}</span>`;
-}
-
-function renderPagination() {
-  const totalPages = Math.ceil(ticketTotal / ticketSize) || 1;
-  const div = document.getElementById('ticketPagination');
-  div.innerHTML = `
-    <button ${ticketPage<=1?'disabled':''} id="prevPage">Prev</button>
-    <span>Page ${ticketPage} / ${totalPages} (${ticketTotal} tickets)</span>
-    <button ${ticketPage>=totalPages?'disabled':''} id="nextPage">Next</button>
-  `;
-  document.getElementById('prevPage')?.addEventListener('click', () => { ticketPage--; loadTickets(); });
-  document.getElementById('nextPage')?.addEventListener('click', () => { ticketPage++; loadTickets(); });
-}
-
-function showTicketDetail(t) {
-  const a = t.ai_analysis || {};
-  const asgn = t.assignment || {};
-  const desc = (t.description||'').replace(/</g,'&lt;');
-  const summary = (a.summary||'').replace(/</g,'&lt;');
-  const reason = (asgn.reason||'').replace(/</g,'&lt;');
-  let attachHtml = '';
-  if (t.attachment_url) {
-    attachHtml = `<div class="field field-full"><div class="field-label">Attachment</div><img src="${t.attachment_url}" style="max-width:100%;border-radius:6px;margin-top:4px" onerror="this.outerHTML='<em>Could not load</em>'"></div>`;
   }
-  document.getElementById('modalContent').innerHTML = `
-    <div class="detail-grid">
-      <div class="field"><div class="field-label">Client GUID</div>${t.client_guid}</div>
-      <div class="field"><div class="field-label">Segment</div><span class="badge badge-${t.segment.toLowerCase()}">${t.segment}</span></div>
-      <div class="field"><div class="field-label">Gender</div>${t.gender||'—'}</div>
-      <div class="field"><div class="field-label">Birth Date</div>${t.birth_date||'—'}</div>
-      <div class="field"><div class="field-label">Category</div>${a.category||'—'}</div>
-      <div class="field"><div class="field-label">Sentiment</div>${sentBadge(a.sentiment)}</div>
-      <div class="field"><div class="field-label">Priority</div>${a.priority||'—'}</div>
-      <div class="field"><div class="field-label">Language</div>${a.language||'—'}</div>
-      <div class="field"><div class="field-label">Manager</div>${asgn.manager_name||'—'}</div>
-      <div class="field"><div class="field-label">Office</div>${asgn.business_unit_name||'—'}</div>
-      <div class="field field-full"><div class="field-label">Address</div>${[t.street,t.house,t.city,t.region,t.country].filter(Boolean).join(', ')||'—'}</div>
-      <div class="field field-full"><div class="field-label">Description</div><div style="white-space:pre-wrap;font-size:13px;max-height:200px;overflow-y:auto">${desc}</div></div>
-      <div class="field field-full"><div class="field-label">AI Summary & Recommendation</div><div style="white-space:pre-wrap;font-size:13px">${summary||'—'}</div></div>
-      <div class="field field-full"><div class="field-label">Assignment Reason</div><div style="font-size:13px">${reason||'—'}</div></div>
-      ${attachHtml}
-    </div>
-  `;
-  document.getElementById('ticketModal').classList.add('show');
-}
+  buildFilters();
 
-document.getElementById('modalClose').addEventListener('click', () => document.getElementById('ticketModal').classList.remove('show'));
-document.getElementById('ticketModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+  // —— Tickets: list ——
+  const TICKET_HEADERS = '<tr><th>ID</th><th>GUID</th><th>Segment</th><th>Category</th><th>Sentiment</th><th>Priority</th><th>Language</th><th>Manager</th><th>Office</th></tr>';
+  const EMPTY = '—';
 
-// MANAGERS
-async function loadManagers() {
-  try {
-    const data = await api('/api/managers');
-    document.getElementById('managerHead').innerHTML = '<tr><th>ID</th><th>Name</th><th>Position</th><th>Skills</th><th>Office</th><th>Load</th></tr>';
-    const body = document.getElementById('managerBody');
-    body.innerHTML = '';
-    data.forEach(m => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${m.id}</td>
-        <td>${m.name}</td>
-        <td>${m.position}</td>
-        <td>${m.skills.map(s => `<span class="badge badge-${s==='VIP'?'vip':'mass'}">${s}</span>`).join(' ')}</td>
-        <td>${m.business_unit_name||'—'}</td>
-        <td>${m.current_load}</td>
-      `;
-      body.appendChild(tr);
-    });
-  } catch(e) { /* empty */ }
-}
+  async function loadTickets() {
+    const params = new URLSearchParams({ page: ticketPage, size: ticketSize });
+    const segment = document.getElementById('fSegment')?.value;
+    const category = document.getElementById('fCategory')?.value;
+    const sentiment = document.getElementById('fSentiment')?.value;
+    const language = document.getElementById('fLanguage')?.value;
+    if (segment) params.set('segment', segment);
+    if (category) params.set('category', category);
+    if (sentiment) params.set('sentiment', sentiment);
+    if (language) params.set('language', language);
 
-loadDashboard();
+    try {
+      const data = await api('/api/tickets?' + params);
+      ticketTotal = data.total;
+      document.getElementById('ticketHead').innerHTML = TICKET_HEADERS;
+      const body = document.getElementById('ticketBody');
+      body.innerHTML = '';
+      data.items.forEach((ticket) => {
+        const tr = document.createElement('tr');
+        tr.className = 'table-row-clickable';
+        tr.addEventListener('click', () => showTicketDetail(ticket));
+        const analysis = ticket.ai_analysis || {};
+        const assignment = ticket.assignment || {};
+        const guidShort = ticket.client_guid ? ticket.client_guid.slice(0, 8) + '...' : EMPTY;
+        tr.innerHTML = `
+          <td>${ticket.id}</td>
+          <td class="col-guid">${guidShort}</td>
+          <td><span class="badge badge-${ticket.segment.toLowerCase()}">${ticket.segment}</span></td>
+          <td>${analysis.category || EMPTY}</td>
+          <td>${sentBadge(analysis.sentiment)}</td>
+          <td>${analysis.priority || EMPTY}</td>
+          <td>${analysis.language || EMPTY}</td>
+          <td>${assignment.manager_name || EMPTY}</td>
+          <td>${assignment.business_unit_name || EMPTY}</td>
+        `;
+        body.appendChild(tr);
+      });
+      renderPagination();
+    } catch (e) {
+      // Empty state
+    }
+  }
+
+  function sentBadge(s) {
+    if (!s) return EMPTY;
+    const cls = s === 'Позитивный' ? 'pos' : s === 'Негативный' ? 'neg' : 'neu';
+    return `<span class="badge badge-${cls}">${s}</span>`;
+  }
+
+  function renderPagination() {
+    const totalPages = Math.ceil(ticketTotal / ticketSize) || 1;
+    const div = document.getElementById('ticketPagination');
+    const prevDisabled = ticketPage <= 1 ? 'disabled' : '';
+    const nextDisabled = ticketPage >= totalPages ? 'disabled' : '';
+    div.innerHTML = `
+      <button ${prevDisabled} id="prevPage">Prev</button>
+      <span>Page ${ticketPage} / ${totalPages} (${ticketTotal} tickets)</span>
+      <button ${nextDisabled} id="nextPage">Next</button>
+    `;
+    document.getElementById('prevPage')?.addEventListener('click', () => { ticketPage--; loadTickets(); });
+    document.getElementById('nextPage')?.addEventListener('click', () => { ticketPage++; loadTickets(); });
+  }
+
+  // —— Ticket detail modal ——
+  function escapeHtml(text) {
+    return (text || '').replace(/</g, '&lt;');
+  }
+
+  function showTicketDetail(ticket) {
+    const analysis = ticket.ai_analysis || {};
+    const assignment = ticket.assignment || {};
+    const desc = escapeHtml(ticket.description);
+    const summary = escapeHtml(analysis.summary);
+    const reason = escapeHtml(assignment.reason);
+    const address = [ticket.street, ticket.house, ticket.city, ticket.region, ticket.country].filter(Boolean).join(', ') || EMPTY;
+
+    let attachHtml = '';
+    if (ticket.attachment_url) {
+      attachHtml = `<div class="field field-full"><div class="field-label">Attachment</div><img class="detail-image" src="${ticket.attachment_url}" alt="" onerror="this.outerHTML='<em>Could not load</em>'"></div>`;
+    }
+
+    document.getElementById('modalContent').innerHTML = `
+      <div class="detail-grid">
+        <div class="field"><div class="field-label">Client GUID</div>${ticket.client_guid}</div>
+        <div class="field"><div class="field-label">Segment</div><span class="badge badge-${ticket.segment.toLowerCase()}">${ticket.segment}</span></div>
+        <div class="field"><div class="field-label">Gender</div>${ticket.gender || EMPTY}</div>
+        <div class="field"><div class="field-label">Birth Date</div>${ticket.birth_date || EMPTY}</div>
+        <div class="field"><div class="field-label">Category</div>${analysis.category || EMPTY}</div>
+        <div class="field"><div class="field-label">Sentiment</div>${sentBadge(analysis.sentiment)}</div>
+        <div class="field"><div class="field-label">Priority</div>${analysis.priority || EMPTY}</div>
+        <div class="field"><div class="field-label">Language</div>${analysis.language || EMPTY}</div>
+        <div class="field"><div class="field-label">Manager</div>${assignment.manager_name || EMPTY}</div>
+        <div class="field"><div class="field-label">Office</div>${assignment.business_unit_name || EMPTY}</div>
+        <div class="field field-full"><div class="field-label">Address</div>${address}</div>
+        <div class="field field-full"><div class="field-label">Description</div><div class="field-content">${desc}</div></div>
+        <div class="field field-full"><div class="field-label">AI Summary & Recommendation</div><div class="field-content no-scroll">${summary || EMPTY}</div></div>
+        <div class="field field-full"><div class="field-label">Assignment Reason</div><div class="field-content no-scroll">${reason || EMPTY}</div></div>
+        ${attachHtml}
+      </div>
+    `;
+    document.getElementById('ticketModal').classList.add('show');
+  }
+
+  document.getElementById('modalClose').addEventListener('click', () => {
+    document.getElementById('ticketModal').classList.remove('show');
+  });
+  document.getElementById('ticketModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.remove('show');
+  });
+
+  // —— Managers ——
+  const MANAGER_HEADERS = '<tr><th>ID</th><th>Name</th><th>Position</th><th>Skills</th><th>Office</th><th>Load</th></tr>';
+
+  async function loadManagers() {
+    try {
+      const data = await api('/api/managers');
+      document.getElementById('managerHead').innerHTML = MANAGER_HEADERS;
+      const body = document.getElementById('managerBody');
+      body.innerHTML = '';
+      data.forEach((m) => {
+        const tr = document.createElement('tr');
+        const skillsHtml = m.skills.map((s) => `<span class="badge badge-${s === 'VIP' ? 'vip' : 'mass'}">${s}</span>`).join(' ');
+        tr.innerHTML = `
+          <td>${m.id}</td>
+          <td>${m.name}</td>
+          <td>${m.position}</td>
+          <td>${skillsHtml}</td>
+          <td>${m.business_unit_name || EMPTY}</td>
+          <td>${m.current_load}</td>
+        `;
+        body.appendChild(tr);
+      });
+    } catch (e) {
+      // Empty state
+    }
+  }
+
+  loadDashboard();
 </script>
 </body>
 </html>

@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://tickets:tickets@db:5432/tickets_db"
