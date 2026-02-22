@@ -1,14 +1,15 @@
 import csv
 import io
 import logging
+import uuid
 from datetime import date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.business_unit import BusinessUnit
 from app.models.manager import Manager
-from app.models.ticket import Ticket
+from app.models.ticket import AIAnalysis, Assignment, Ticket
 
 logger = logging.getLogger(__name__)
 
@@ -36,23 +37,31 @@ def _make_reader(file: io.StringIO) -> csv.DictReader:
 async def load_business_units(
     session: AsyncSession, file: io.StringIO
 ) -> dict[str, BusinessUnit]:
-    existing = (await session.execute(select(BusinessUnit))).scalars().all()
-    if existing:
-        return {bu.name: bu for bu in existing}
+    existing_list = (await session.execute(select(BusinessUnit))).scalars().all()
+    result: dict[str, BusinessUnit] = {bu.name: bu for bu in existing_list}
 
     reader = _make_reader(file)
-    result: dict[str, BusinessUnit] = {}
     for raw_row in reader:
         row = _clean_row(raw_row)
         name = row["Офис"]
         address = row["Адрес"]
-        bu = BusinessUnit(name=name, address=address)
-        session.add(bu)
-        result[name] = bu
+        if name in result:
+            bu = result[name]
+            bu.address = address
+            bu.latitude = None
+            bu.longitude = None
+        else:
+            bu = BusinessUnit(name=name, address=address)
+            session.add(bu)
+            result[name] = bu
 
     await session.flush()
-    logger.info("Loaded %d business units", len(result))
+    logger.info("Loaded %d business units (upsert)", len(result))
     return result
+
+
+def _manager_key(m: Manager) -> tuple[str, int]:
+    return (m.name, m.business_unit_id)
 
 
 async def load_managers(
@@ -60,12 +69,11 @@ async def load_managers(
     bu_map: dict[str, BusinessUnit],
     file: io.StringIO,
 ) -> list[Manager]:
-    existing = (await session.execute(select(Manager))).scalars().all()
-    if existing:
-        return list(existing)
+    existing_list = (await session.execute(select(Manager))).scalars().all()
+    by_key: dict[tuple[str, int], Manager] = {_manager_key(m): m for m in existing_list}
 
     reader = _make_reader(file)
-    managers: list[Manager] = []
+    managers: list[Manager] = list(existing_list)
     for raw_row in reader:
         row = _clean_row(raw_row)
         name = row["ФИО"]
@@ -80,18 +88,26 @@ async def load_managers(
             logger.warning("Unknown office '%s' for manager '%s'", office, name)
             continue
 
-        mgr = Manager(
-            name=name,
-            position=position,
-            skills=skills,
-            business_unit_id=bu.id,
-            current_load=load,
-        )
-        session.add(mgr)
-        managers.append(mgr)
+        key = (name, bu.id)
+        if key in by_key:
+            mgr = by_key[key]
+            mgr.position = position
+            mgr.skills = skills
+            mgr.current_load = load
+        else:
+            mgr = Manager(
+                name=name,
+                position=position,
+                skills=skills,
+                business_unit_id=bu.id,
+                current_load=load,
+            )
+            session.add(mgr)
+            by_key[key] = mgr
+            managers.append(mgr)
 
     await session.flush()
-    logger.info("Loaded %d managers", len(managers))
+    logger.info("Loaded %d managers (upsert)", len(managers))
     return managers
 
 
@@ -107,36 +123,66 @@ def _parse_date(value: str) -> date | None:
     return None
 
 
+def _parse_guid(value: str) -> uuid.UUID | None:
+    try:
+        return uuid.UUID(value.strip())
+    except (ValueError, AttributeError):
+        logger.warning("Invalid GUID: %r", value)
+        return None
+
+
 async def load_tickets(
     session: AsyncSession, file: io.StringIO
 ) -> list[Ticket]:
-    existing = (await session.execute(select(Ticket))).scalars().all()
-    if existing:
-        return list(existing)
+    existing_list = (await session.execute(select(Ticket))).scalars().all()
+    by_guid: dict[uuid.UUID, Ticket] = {}
+    for t in existing_list:
+        if t.client_guid not in by_guid:
+            by_guid[t.client_guid] = t
 
     reader = _make_reader(file)
-    tickets: list[Ticket] = []
     for raw_row in reader:
         row = _clean_row(raw_row)
+        guid = _parse_guid(row.get("GUID клиента", ""))
+        if guid is None:
+            continue
         attachment_raw = row.get("Вложения", "")
         attachment_key = attachment_raw if attachment_raw else None
 
-        ticket = Ticket(
-            client_guid=row["GUID клиента"],
-            gender=row.get("Пол клиента") or None,
-            birth_date=_parse_date(row.get("Дата рождения", "")),
-            description=row["Описание"],
-            attachment_key=attachment_key,
-            segment=row["Сегмент клиента"],
-            country=row.get("Страна") or None,
-            region=row.get("Область") or None,
-            city=row.get("Населённый пункт") or None,
-            street=row.get("Улица") or None,
-            house=row.get("Дом") or None,
-        )
-        session.add(ticket)
-        tickets.append(ticket)
+        if guid in by_guid:
+            ticket = by_guid[guid]
+            ticket.gender = row.get("Пол клиента") or None
+            ticket.birth_date = _parse_date(row.get("Дата рождения", ""))
+            ticket.description = row["Описание"]
+            ticket.attachment_key = attachment_key
+            ticket.segment = row["Сегмент клиента"]
+            ticket.country = row.get("Страна") or None
+            ticket.region = row.get("Область") or None
+            ticket.city = row.get("Населённый пункт") or None
+            ticket.street = row.get("Улица") or None
+            ticket.house = row.get("Дом") or None
+            ticket.latitude = None
+            ticket.longitude = None
+            await session.execute(delete(AIAnalysis).where(AIAnalysis.ticket_id == ticket.id))
+            await session.execute(delete(Assignment).where(Assignment.ticket_id == ticket.id))
+        else:
+            ticket = Ticket(
+                client_guid=guid,
+                gender=row.get("Пол клиента") or None,
+                birth_date=_parse_date(row.get("Дата рождения", "")),
+                description=row["Описание"],
+                attachment_key=attachment_key,
+                segment=row["Сегмент клиента"],
+                country=row.get("Страна") or None,
+                region=row.get("Область") or None,
+                city=row.get("Населённый пункт") or None,
+                street=row.get("Улица") or None,
+                house=row.get("Дом") or None,
+            )
+            session.add(ticket)
+            by_guid[guid] = ticket
 
     await session.flush()
-    logger.info("Loaded %d tickets", len(tickets))
+    tickets = list(by_guid.values())
+    logger.info("Loaded %d tickets (upsert)", len(tickets))
     return tickets

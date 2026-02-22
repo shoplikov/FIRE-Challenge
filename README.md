@@ -130,6 +130,6 @@ Dashboard and manager table will update after processing.
 
 ## Notes
 
-- On first upload, CSV loaders are insert-only if data already exists.
+- CSV uploads upsert by natural key (office name, manager name+office, ticket client GUID): existing rows are updated from the CSV, new rows are inserted, duplicates are skipped.
 - Geocoding relies on Nominatim and is rate-limited.
 - LLM classification quality depends on prompt/model and ticket text quality.
