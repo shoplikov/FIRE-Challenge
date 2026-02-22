@@ -11,8 +11,6 @@ class Settings(BaseSettings):
     minio_bucket: str = "attachments"
     minio_secure: bool = False
     geocoder_user_agent: str = "ticket-distribution-service"
-    csv_dir: str = "/app/data/statics"
-    attachments_dir: str = "/app/data/attachments"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

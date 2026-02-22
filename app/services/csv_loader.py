@@ -1,13 +1,11 @@
 import csv
 import io
 import logging
-import os
 from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.models.business_unit import BusinessUnit
 from app.models.manager import Manager
 from app.models.ticket import Ticket
@@ -29,25 +27,20 @@ def _clean_row(row: dict[str, str]) -> dict[str, str]:
     }
 
 
-def _make_reader(file: io.StringIO | None, fallback_path: str):
-    """Return (csv.DictReader, file_handle_to_close_or_None)."""
-    if file is not None:
-        content = file.getvalue().lstrip("\ufeff")
-        return csv.DictReader(io.StringIO(content)), None
-    fh = open(fallback_path, encoding="utf-8-sig")
-    return csv.DictReader(fh), fh
+def _make_reader(file: io.StringIO) -> csv.DictReader:
+    """Build a DictReader from in-memory CSV content."""
+    content = file.getvalue().lstrip("\ufeff")
+    return csv.DictReader(io.StringIO(content))
 
 
 async def load_business_units(
-    session: AsyncSession, file: io.StringIO | None = None
+    session: AsyncSession, file: io.StringIO
 ) -> dict[str, BusinessUnit]:
     existing = (await session.execute(select(BusinessUnit))).scalars().all()
     if existing:
         return {bu.name: bu for bu in existing}
 
-    path = os.path.join(settings.csv_dir, "business_units.csv")
-    reader, fh = _make_reader(file, path)
-
+    reader = _make_reader(file)
     result: dict[str, BusinessUnit] = {}
     for raw_row in reader:
         row = _clean_row(raw_row)
@@ -57,9 +50,6 @@ async def load_business_units(
         session.add(bu)
         result[name] = bu
 
-    if fh:
-        fh.close()
-
     await session.flush()
     logger.info("Loaded %d business units", len(result))
     return result
@@ -68,15 +58,13 @@ async def load_business_units(
 async def load_managers(
     session: AsyncSession,
     bu_map: dict[str, BusinessUnit],
-    file: io.StringIO | None = None,
+    file: io.StringIO,
 ) -> list[Manager]:
     existing = (await session.execute(select(Manager))).scalars().all()
     if existing:
         return list(existing)
 
-    path = os.path.join(settings.csv_dir, "managers.csv")
-    reader, fh = _make_reader(file, path)
-
+    reader = _make_reader(file)
     managers: list[Manager] = []
     for raw_row in reader:
         row = _clean_row(raw_row)
@@ -102,9 +90,6 @@ async def load_managers(
         session.add(mgr)
         managers.append(mgr)
 
-    if fh:
-        fh.close()
-
     await session.flush()
     logger.info("Loaded %d managers", len(managers))
     return managers
@@ -123,15 +108,13 @@ def _parse_date(value: str) -> date | None:
 
 
 async def load_tickets(
-    session: AsyncSession, file: io.StringIO | None = None
+    session: AsyncSession, file: io.StringIO
 ) -> list[Ticket]:
     existing = (await session.execute(select(Ticket))).scalars().all()
     if existing:
         return list(existing)
 
-    path = os.path.join(settings.csv_dir, "tickets.csv")
-    reader, fh = _make_reader(file, path)
-
+    reader = _make_reader(file)
     tickets: list[Ticket] = []
     for raw_row in reader:
         row = _clean_row(raw_row)
@@ -153,9 +136,6 @@ async def load_tickets(
         )
         session.add(ticket)
         tickets.append(ticket)
-
-    if fh:
-        fh.close()
 
     await session.flush()
     logger.info("Loaded %d tickets", len(tickets))

@@ -54,8 +54,6 @@ services:
         condition: service_completed_successfully
     env_file:
       - .env
-    volumes:
-      - ./data:/srv/data
 
 volumes:
   pgdata:
