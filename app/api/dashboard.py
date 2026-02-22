@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,7 +6,13 @@ from app.database import get_session
 from app.models.business_unit import BusinessUnit
 from app.models.ticket import AIAnalysis, Assignment, Ticket
 from app.schemas.business_unit import BusinessUnitOut
-from app.schemas.ticket import DashboardStats
+from app.schemas.ticket import (
+    AIChartRequest,
+    AIChartResponse,
+    DashboardStats,
+)
+from app.services.chart_aggregation import get_chart_data
+from app.services.chart_intent import parse_chart_query
 
 router = APIRouter(prefix="/api", tags=["dashboard"])
 
@@ -72,3 +78,31 @@ async def list_business_units(session: AsyncSession = Depends(get_session)):
         await session.execute(select(BusinessUnit).order_by(BusinessUnit.id))
     ).scalars().all()
     return [BusinessUnitOut.model_validate(bu) for bu in result]
+
+
+@router.post("/dashboard/ai-chart", response_model=AIChartResponse)
+async def ai_chart(
+    body: AIChartRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Parse natural-language query and return chart data (1D or 2D)."""
+    try:
+        intent = await parse_chart_query(body.query)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail="Не удалось определить параметры графика. Уточните запрос.",
+        ) from e
+
+    try:
+        data_1d, data_2d = await get_chart_data(session, intent)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    title = intent.title or "График"
+    return AIChartResponse(
+        title=title,
+        chart_type=intent.chart_type,
+        data_1d=data_1d,
+        data_2d=data_2d,
+    )

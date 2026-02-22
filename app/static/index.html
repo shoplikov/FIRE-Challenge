@@ -459,6 +459,93 @@
   .toast.show { opacity: 1; }
   .toast.error { border-color: var(--red); }
   .toast.success { border-color: var(--green); }
+
+  /* AI Chart Assistant */
+  .ai-chart-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  #ai .ai-chart-section {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+  .ai-chart-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+  .ai-chart-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .ai-chart-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 14px;
+    font-size: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+  }
+  .ai-chart-input::placeholder {
+    color: var(--text2);
+  }
+  .ai-chart-chips {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    padding: 6px 12px;
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .chip:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+  .bar-row .bar-track-stacked {
+    display: flex;
+    width: 100%;
+    min-width: 120px;
+    height: 24px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar-row .bar-segment {
+    height: 100%;
+    flex-shrink: 0;
+  }
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .chart-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chart-legend .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
 </style>
 </head>
 <body>
@@ -469,6 +556,7 @@
       <a href="#dashboard" class="active" data-page="dashboard">Dashboard</a>
       <a href="#tickets" data-page="tickets">Tickets</a>
       <a href="#managers" data-page="managers">Managers</a>
+      <a href="#ai" data-page="ai">AI</a>
     </nav>
   </div>
   <div class="main">
@@ -510,6 +598,25 @@
 
       <div class="stats-grid" id="statsCards"></div>
       <div class="charts-grid" id="chartsArea"></div>
+    </div>
+
+    <!-- AI -->
+    <div id="ai" class="page">
+      <div class="page-header">
+        <h2>Аналитика по запросу</h2>
+      </div>
+      <div class="ai-chart-section">
+        <div class="ai-chart-row">
+          <input type="text" id="aiChartQuery" class="ai-chart-input" placeholder="Например: распределение типов обращений по городам">
+          <button type="button" class="btn btn-primary" id="btnAiChart">Построить график</button>
+        </div>
+        <div class="ai-chart-chips">
+          <button type="button" class="chip" data-query="Распределение типов обращений по городам">Типы обращений по городам</button>
+          <button type="button" class="chip" data-query="Обращения по офисам">Обращения по офисам</button>
+          <button type="button" class="chip" data-query="Языки по сегментам">Языки по сегментам</button>
+        </div>
+        <div class="charts-grid" id="aiChartsArea"></div>
+      </div>
     </div>
 
     <!-- TICKETS -->
@@ -570,6 +677,7 @@
       if (link.dataset.page === 'dashboard') loadDashboard();
       if (link.dataset.page === 'tickets') loadTickets();
       if (link.dataset.page === 'managers') loadManagers();
+      // AI page has no initial load
     });
   });
 
@@ -620,7 +728,7 @@
       const pct = (value / max * 100).toFixed(1);
       const color = colors[i % colors.length];
       html += `<div class="bar-row">
-        <span class="bar-label" title="${label}">${label}</span>
+        <span class="bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
         <span class="bar-value">${value}</span>
       </div>`;
@@ -629,6 +737,93 @@
     div.innerHTML = html;
     return div;
   }
+
+  function makeStackedOrGroupedBarChart(title, labels, series, colors) {
+    const div = document.createElement('div');
+    div.className = 'chart-card';
+    const colorList = colors || CHART_COLORS.default;
+    let html = `<h3>${escapeHtml(title)}</h3>`;
+    html += '<div class="chart-legend">';
+    series.forEach((s, i) => {
+      const color = colorList[i % colorList.length];
+      html += `<span><span class="legend-dot" style="background:${color}"></span>${escapeHtml(s.name)}</span>`;
+    });
+    html += '</div><div class="bar-chart">';
+    labels.forEach((label, rowIdx) => {
+      const rowTotal = series.reduce((sum, s) => sum + (s.values[rowIdx] || 0), 0);
+      const segments = series.map((s, i) => {
+        const v = s.values[rowIdx] || 0;
+        const pct = rowTotal > 0 ? (v / rowTotal * 100).toFixed(1) : 0;
+        const color = colorList[i % colorList.length];
+        return `<div class="bar-segment" style="width:${pct}%;background:${color}" title="${escapeHtml(s.name)}: ${v}"></div>`;
+      }).join('');
+      html += `<div class="bar-row">
+        <span class="bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+        <div class="bar-track bar-track-stacked">${segments}</div>
+        <span class="bar-value">${rowTotal}</span>
+      </div>`;
+    });
+    html += '</div>';
+    div.innerHTML = html;
+    return div;
+  }
+
+  async function runAiChart() {
+    const input = document.getElementById('aiChartQuery');
+    const btn = document.getElementById('btnAiChart');
+    const area = document.getElementById('aiChartsArea');
+    const query = (input && input.value && input.value.trim()) || '';
+    if (!query) {
+      toast('Введите запрос', 'error');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Загрузка...';
+    area.innerHTML = '<div class="chart-card"><p style="color:var(--text2)">Загрузка...</p></div>';
+    try {
+      const res = await fetch(API + '/api/dashboard/ai-chart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast(data.detail || res.statusText || 'Ошибка запроса', 'error');
+        area.innerHTML = '';
+        return;
+      }
+      area.innerHTML = '';
+      const title = data.title || 'График';
+      const chartType = data.chart_type || 'bar';
+      if (data.data_1d && Object.keys(data.data_1d).length > 0) {
+        area.appendChild(makeBarChart(title, data.data_1d, CHART_COLORS.default));
+      } else if (data.data_2d && data.data_2d.labels && data.data_2d.series && data.data_2d.series.length > 0) {
+        area.appendChild(makeStackedOrGroupedBarChart(title, data.data_2d.labels, data.data_2d.series, CHART_COLORS.default));
+      } else {
+        area.innerHTML = '<div class="chart-card"><p style="color:var(--text2)">Нет данных</p></div>';
+      }
+    } catch (e) {
+      toast('Ошибка: ' + (e.message || 'сеть'), 'error');
+      area.innerHTML = '';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Построить график';
+    }
+  }
+
+  document.getElementById('btnAiChart').addEventListener('click', runAiChart);
+  document.querySelectorAll('.ai-chart-chips .chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const q = chip.getAttribute('data-query');
+      if (q && document.getElementById('aiChartQuery')) {
+        document.getElementById('aiChartQuery').value = q;
+        runAiChart();
+      }
+    });
+  });
+  document.getElementById('aiChartQuery').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') runAiChart();
+  });
 
   // —— Upload ——
   document.getElementById('btnUpload').addEventListener('click', async function () {

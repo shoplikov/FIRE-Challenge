@@ -72,3 +72,25 @@ class PipelineResult(BaseModel):
     tickets_assigned: int
     errors: list[str]
     tickets: list[TicketOut]
+
+
+# AI Chart Assistant
+class AIChartRequest(BaseModel):
+    query: str
+
+
+class ChartSeries(BaseModel):
+    name: str
+    values: list[int]
+
+
+class ChartData2D(BaseModel):
+    labels: list[str]
+    series: list[ChartSeries]
+
+
+class AIChartResponse(BaseModel):
+    title: str
+    chart_type: str
+    data_1d: dict[str, int] | None = None
+    data_2d: ChartData2D | None = None
