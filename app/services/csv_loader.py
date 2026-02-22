@@ -47,9 +47,10 @@ async def load_business_units(
         address = row["Адрес"]
         if name in result:
             bu = result[name]
+            if bu.address != address:
+                bu.latitude = None
+                bu.longitude = None
             bu.address = address
-            bu.latitude = None
-            bu.longitude = None
         else:
             bu = BusinessUnit(name=name, address=address)
             session.add(bu)
