@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +13,13 @@ from app.api.upload import router as upload_router
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+)
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"(?s).*PydanticSerializationUnexpectedValue.*field_name='parsed'.*",
+    category=UserWarning,
+    module=r"pydantic(\..*)?",
 )
 
 app = FastAPI(

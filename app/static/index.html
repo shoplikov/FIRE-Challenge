@@ -656,6 +656,7 @@
       toast(`Done! Loaded: ${data.tickets_loaded}, Analyzed: ${data.tickets_analyzed}, Assigned: ${data.tickets_assigned}`);
       statusEl.textContent = `${data.tickets_loaded} tickets loaded, ${data.tickets_assigned} assigned`;
       loadDashboard();
+      loadManagers();
     } catch (e) {
       toast('Pipeline failed: ' + e.message, 'error');
     } finally {
@@ -673,6 +674,7 @@
       const data = await api('/api/process', { method: 'POST' });
       toast(`Done! Loaded: ${data.tickets_loaded}, Analyzed: ${data.tickets_analyzed}, Assigned: ${data.tickets_assigned}`);
       loadDashboard();
+      loadManagers();
     } catch (e) {
       toast('Pipeline failed: ' + e.message, 'error');
     } finally {

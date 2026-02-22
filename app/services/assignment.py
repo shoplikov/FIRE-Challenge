@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.business_unit import BusinessUnit
 from app.models.manager import Manager
 from app.models.ticket import AIAnalysis, Assignment, Ticket
-from app.services.geocoding import find_nearest_office
+from app.services.geocoding import find_nearest_office, get_distance_km
 
 logger = logging.getLogger(__name__)
 
@@ -113,19 +113,38 @@ async def assign_tickets(
         eligible = _filter_by_skills(office_managers, ticket, analysis)
 
         if not eligible:
-            other_offices = sorted(
-                [bu for bu in offices if bu.id != target_office.id and bu.latitude is not None],
-                key=lambda bu: (
-                    ((ticket.latitude or 0) - (bu.latitude or 0)) ** 2
-                    + ((ticket.longitude or 0) - (bu.longitude or 0)) ** 2
-                ),
-            )
+            source_office = target_office
+            offices_with_coords = [
+                bu
+                for bu in offices
+                if bu.id != source_office.id and bu.latitude is not None and bu.longitude is not None
+            ]
+            if source_office.latitude is not None and source_office.longitude is not None:
+                other_offices = sorted(
+                    offices_with_coords,
+                    key=lambda bu: get_distance_km(
+                        source_office.latitude,
+                        source_office.longitude,
+                        bu.latitude,
+                        bu.longitude,
+                    ),
+                )
+            else:
+                # Deterministic fallback order when source office coordinates are absent.
+                other_offices = sorted(
+                    [bu for bu in offices if bu.id != source_office.id],
+                    key=lambda bu: bu.id,
+                )
             for fallback_office in other_offices:
                 fallback_managers = managers_by_office.get(fallback_office.id, [])
                 eligible = _filter_by_skills(fallback_managers, ticket, analysis)
                 if eligible:
                     target_office = fallback_office
-                    reason_parts.append(f"Фоллбэк на офис {fallback_office.name} (нет подходящих менеджеров в первичном)")
+                    reason_parts.append(
+                        "Фоллбэк по компетенциям: "
+                        f"{source_office.name} -> {fallback_office.name} "
+                        "(в первичном офисе нет подходящих менеджеров)"
+                    )
                     break
 
         if not eligible:
@@ -150,7 +169,10 @@ async def assign_tickets(
         if skill_info:
             reason_parts.append(f"Фильтр компетенций: {', '.join(skill_info)}")
 
-        reason_parts.append(f"Round Robin → {chosen.name} (нагрузка: {chosen.current_load})")
+        reason_parts.append(
+            "Round Robin → "
+            f"{chosen.name} (нагрузка до назначения: {chosen.current_load}, после: {chosen.current_load + 1})"
+        )
 
         assignment = Assignment(
             ticket_id=ticket.id,

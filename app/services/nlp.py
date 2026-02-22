@@ -20,6 +20,17 @@ Analyze the customer ticket below and extract structured information.
 
 Rules:
 - category: Choose EXACTLY ONE from the list. Pick the BEST match.
+- Category definitions:
+  - "Спам": unsolicited advertising, mass/templated promotions, irrelevant content, repeated messages, suspicious links/invites (e.g. casino, betting, crypto pumps, "quick earnings", "join channel", "DM me"), or any message unrelated to support request.
+  - "Мошеннические действия": user reports scam/fraud, unauthorized transactions/access, account takeover, phishing, identity theft, or asks to block fraudulent activity.
+  - "Неработоспособность приложения": app/site does not work, errors, crashes, login failures, broken features.
+  - "Смена данных": requests to change personal/profile/account data.
+  - "Претензия": formal claim/dispute with demand for review/compensation.
+  - "Жалоба": complaint about service quality/employee/process without formal claim.
+  - "Консультация": information request/how-to/general question.
+- Classification priority:
+  - If the message is irrelevant/promotional/mass-like, choose "Спам" even if sentiment looks neutral.
+  - If both spam-like and fraud-reporting signals are present, choose "Мошеннические действия" only when the user is clearly reporting victimization or unauthorized activity; otherwise choose "Спам".
 - sentiment: Evaluate the emotional tone of the customer's message.
 - priority: 1 = lowest urgency, 10 = highest urgency. Consider: threats, financial loss, blocked accounts, fraud = high priority. General questions = low priority.
 - language: Detect the PRIMARY language. If the text is mostly in Russian, output "RU". If Kazakh, output "KZ". If English, output "ENG". Default to "RU" if unclear.
