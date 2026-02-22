@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ticket Distribution Service</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   /* Reset */
   *, *::before, *::after {
@@ -136,6 +138,97 @@
   }
   .stat-card .value.accent { color: var(--accent); }
   .stat-card .value.green { color: var(--green); }
+
+  /* Map */
+  #map {
+    width: 100%;
+    height: 500px;
+    border-radius: 10px;
+    background: var(--surface2);
+  }
+  .map-container {
+    padding: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .leaflet-container {
+    background: var(--bg) !important;
+  }
+  .map-popup-content {
+    min-width: 240px;
+    color: var(--text);
+    font-size: 13px;
+  }
+  .map-popup-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .map-popup-address {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  .map-popup-divider {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 10px 0;
+  }
+  .map-popup-loading {
+    font-size: 12px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .map-popup-section {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .map-popup-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .map-popup-table th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text2);
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .map-popup-th-num { text-align: right; }
+  .map-popup-table td {
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .map-popup-td-name { color: var(--text2); }
+  .map-popup-td-load {
+    text-align: right;
+    color: var(--green);
+    font-weight: 600;
+  }
+  .map-popup-empty {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+  .map-popup-error {
+    font-size: 12px;
+    color: var(--red);
+    margin-top: 4px;
+  }
 
   /* Charts */
   .charts-grid {
@@ -556,6 +649,7 @@
       <a href="#dashboard" class="active" data-page="dashboard">Dashboard</a>
       <a href="#tickets" data-page="tickets">Tickets</a>
       <a href="#managers" data-page="managers">Managers</a>
+      <a href="#map-page" data-page="map-page">Map View</a>
       <a href="#ai" data-page="ai">AI</a>
     </nav>
   </div>
@@ -598,6 +692,16 @@
 
       <div class="stats-grid" id="statsCards"></div>
       <div class="charts-grid" id="chartsArea"></div>
+    </div>
+
+    <!-- Map -->
+    <div id="map-page" class="page">
+      <div class="page-header">
+        <h2>Business Units Map</h2>
+      </div>
+      <div class="map-container">
+        <div id="map"></div>
+      </div>
     </div>
 
     <!-- AI -->
@@ -677,9 +781,78 @@
       if (link.dataset.page === 'dashboard') loadDashboard();
       if (link.dataset.page === 'tickets') loadTickets();
       if (link.dataset.page === 'managers') loadManagers();
+      if (link.dataset.page === 'map-page') initMap();
       // AI page has no initial load
     });
   });
+
+  let map = null;
+  async function initMap() {
+    setTimeout(async () => {
+      if (!map) {
+        map = L.map('map').setView([48.0196, 66.9237], 5);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; CARTO'
+        }).addTo(map);
+      }
+      try {
+        const units = await api('/api/dashboard/map');
+        map.eachLayer((layer) => {
+          if (layer instanceof L.Marker) map.removeLayer(layer);
+        });
+        units.forEach((unit) => {
+          if (unit.latitude != null && unit.longitude != null) {
+            const marker = L.marker([unit.latitude, unit.longitude]).addTo(map);
+            marker.bindPopup(`<div id="popup-unit-${unit.id}" class="map-popup-content">
+              <div class="map-popup-title">${escapeHtml(unit.name)}</div>
+              <div class="map-popup-address">${escapeHtml(unit.address || '')}</div>
+              <hr class="map-popup-divider">
+              <div class="map-popup-loading"><span class="spinner" style="width:12px; height:12px;"></span> Загрузка...</div>
+            </div>`);
+            marker.on('click', async () => {
+              const container = document.getElementById(`popup-unit-${unit.id}`);
+              try {
+                const managers = await api(`/api/dashboard/business-units/${unit.id}/managers`);
+                if (container) {
+                  let mgrHtml = '';
+                  if (managers.length > 0) {
+                    mgrHtml = `<div class="map-popup-section">Менеджеры</div>
+                    <table class="map-popup-table">
+                      <thead><tr><th>Менеджер</th><th class="map-popup-th-num">Тикетов</th></tr></thead>
+                      <tbody>
+                        ${managers.map(m => `<tr>
+                          <td class="map-popup-td-name">${escapeHtml(m.name)}</td>
+                          <td class="map-popup-td-load">${m.current_load}</td>
+                        </tr>`).join('')}
+                      </tbody>
+                    </table>`;
+                  } else {
+                    mgrHtml = '<div class="map-popup-empty">Менеджеры не найдены</div>';
+                  }
+                  container.innerHTML = `<div class="map-popup-title">${escapeHtml(unit.name)}</div>
+                    <div class="map-popup-address">${escapeHtml(unit.address || '')}</div>
+                    <hr class="map-popup-divider">
+                    ${mgrHtml}`;
+                }
+              } catch (err) {
+                console.error('Ошибка загрузки менеджеров:', err);
+                if (container) {
+                  container.innerHTML = `<div class="map-popup-title">${escapeHtml(unit.name)}</div>
+                    <div class="map-popup-address">${escapeHtml(unit.address || '')}</div>
+                    <hr class="map-popup-divider">
+                    <div class="map-popup-error">Ошибка: ${escapeHtml(err.message || 'сеть')}</div>`;
+                }
+              }
+            });
+          }
+        });
+        map.invalidateSize();
+      } catch (e) {
+        console.error('Ошибка загрузки данных для карты:', e);
+        toast('Ошибка загрузки карты', 'error');
+      }
+    }, 200);
+  }
 
   function toast(msg, type = 'success') {
     const el = document.getElementById('toast');

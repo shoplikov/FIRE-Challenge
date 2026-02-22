@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import get_session
 from app.models.business_unit import BusinessUnit
@@ -146,17 +147,15 @@ async def business_unit_managers(
     unit_id: int,
     session: AsyncSession = Depends(get_session),
 ):
-    # Используем outerjoin, чтобы менеджеры с 0 тикетов тоже отображались
+    # Используем outerjoin, чтобы менеджеры с 0 тикетов тоже отображались.
+    # Ticket модели нет поля status — считаем все назначенные тикеты (assignments).
     rows = (
         await session.execute(
-            select(
-                Manager,
-                func.count(Ticket.id).label("load_count"),
-            )
+            select(Manager, func.count(Assignment.id).label("load_count"))
             .outerjoin(Assignment, Assignment.manager_id == Manager.id)
-            .outerjoin(Ticket, (Ticket.id == Assignment.ticket_id) & (Ticket.status == "open"))
             .where(Manager.business_unit_id == unit_id)
             .group_by(Manager.id)
+            .options(selectinload(Manager.business_unit))
         )
     ).all()
 
