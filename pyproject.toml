@@ -1,0 +1,20 @@
+[project]
+name = "ticket-distribution-service"
+version = "1.0.0"
+description = "Automated ticket processing, AI enrichment, and manager assignment"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]",
+    "uvicorn[standard]",
+    "sqlalchemy[asyncio]",
+    "asyncpg",
+    "alembic",
+    "pydantic",
+    "pydantic-settings",
+    "langchain",
+    "langchain-openai",
+    "geopy",
+    "aiohttp",
+    "minio",
+    "python-multipart",
+]
