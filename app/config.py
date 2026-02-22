@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     minio_bucket: str = "attachments"
     minio_secure: bool = False
     geocoder_user_agent: str = "ticket-distribution-service"
+    langfuse_enabled: bool = True
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_base_url: str = "https://cloud.langfuse.com"
+    langfuse_host: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

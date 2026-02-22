@@ -48,6 +48,9 @@ cp .env.example .env
 Important values:
 - `OPENAI_API_KEY` (required for NLP analysis)
 - `OPENAI_MODEL` (default `gpt-4o-mini`)
+- `LANGFUSE_ENABLED` (set `true` to enable NLP tracing)
+- `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY`
+- `LANGFUSE_BASE_URL` (default `https://cloud.langfuse.com`)
 - `DATABASE_URL`
 - `MINIO_ENDPOINT`
 - `MINIO_ACCESS_KEY`

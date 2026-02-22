@@ -13,6 +13,7 @@ dependencies = [
     "pydantic-settings",
     "langchain",
     "langchain-openai",
+    "langfuse",
     "geopy",
     "aiohttp",
     "minio",

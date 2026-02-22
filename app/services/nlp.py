@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import os
 from typing import Literal
 
 from langchain_openai import ChatOpenAI
+from langfuse.langchain import CallbackHandler
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,11 +58,32 @@ class TicketAnalysis(BaseModel):
 
 
 def _get_llm() -> ChatOpenAI:
+    callbacks = _get_langfuse_callbacks()
     return ChatOpenAI(
         model=settings.openai_model,
         api_key=settings.openai_api_key,
         temperature=0,
+        callbacks=callbacks if callbacks else None,
     )
+
+
+def _get_langfuse_callbacks() -> list[CallbackHandler]:
+    if not settings.langfuse_enabled:
+        return []
+
+    if not settings.langfuse_public_key or not settings.langfuse_secret_key:
+        logger.warning(
+            "Langfuse is enabled, but credentials are missing. Tracing is disabled."
+        )
+        return []
+
+    # Langfuse v2 CallbackHandler reads from env vars only
+    base_url = settings.langfuse_base_url or settings.langfuse_host or "https://cloud.langfuse.com"
+    os.environ["LANGFUSE_PUBLIC_KEY"] = settings.langfuse_public_key
+    os.environ["LANGFUSE_SECRET_KEY"] = settings.langfuse_secret_key
+    os.environ["LANGFUSE_HOST"] = base_url
+    os.environ["LANGFUSE_BASE_URL"] = base_url
+    return [CallbackHandler()]
 
 
 async def analyze_ticket(description: str) -> TicketAnalysis:
