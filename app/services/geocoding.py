@@ -78,26 +78,9 @@ def _build_office_addresses(bu: BusinessUnit) -> list[str]:
 
 
 def _build_ticket_addresses(ticket: Ticket) -> list[str]:
-    """Return address variants from most to least specific."""
-    parts = []
-    if ticket.street:
-        parts.append(ticket.street)
-    if ticket.house:
-        parts.append(ticket.house)
-    if ticket.city:
-        parts.append(ticket.city)
-    if ticket.region:
-        parts.append(ticket.region)
-    if ticket.country:
-        parts.append(ticket.country)
-
-    variants = []
-    if parts:
-        variants.append(", ".join(parts))
-    city_parts = [p for p in [ticket.city, ticket.region, ticket.country] if p]
-    if city_parts and city_parts != parts:
-        variants.append(", ".join(city_parts))
-    return variants
+    """Return address variants using country, region, city only."""
+    parts = [p for p in [ticket.country, ticket.region] if p]
+    return [", ".join(parts)] if parts else []
 
 
 async def geocode_business_units(
