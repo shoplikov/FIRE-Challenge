@@ -514,7 +514,12 @@
 
     <!-- TICKETS -->
     <div id="tickets" class="page">
-      <div class="page-header"><h2>Tickets</h2></div>
+      <div class="page-header">
+        <h2>Tickets</h2>
+        <div class="page-actions">
+          <button class="btn btn-primary" id="btnExportTickets" type="button">Export CSV</button>
+        </div>
+      </div>
       <div class="filters" id="ticketFilters"></div>
       <div class="table-wrap"><table><thead id="ticketHead"></thead><tbody id="ticketBody"></tbody></table></div>
       <div class="pagination" id="ticketPagination"></div>
@@ -706,6 +711,18 @@
         ticketPage = 1;
         loadTickets();
       });
+    });
+    document.getElementById('btnExportTickets')?.addEventListener('click', () => {
+      const params = new URLSearchParams();
+      const segment = document.getElementById('fSegment')?.value;
+      const category = document.getElementById('fCategory')?.value;
+      const sentiment = document.getElementById('fSentiment')?.value;
+      const language = document.getElementById('fLanguage')?.value;
+      if (segment) params.set('segment', segment);
+      if (category) params.set('category', category);
+      if (sentiment) params.set('sentiment', sentiment);
+      if (language) params.set('language', language);
+      window.location.href = API + '/api/tickets/export?' + params.toString();
     });
   }
   buildFilters();
